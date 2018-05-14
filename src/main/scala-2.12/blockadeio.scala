@@ -14,12 +14,9 @@
 //:   limitations under the License.
 //:
 //: ----------------------------------------------------------------------------
-package verizon.build
-
-import scala.util.Try
 import java.net.URI
 import scala.io.Source
-import net.liftweb.json._
+import scala.util.Try
 
 object blockadeio {
   type JsonAsString = String

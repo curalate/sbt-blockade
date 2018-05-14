@@ -14,12 +14,12 @@
 //:   limitations under the License.
 //:
 //: ----------------------------------------------------------------------------
-package verizon.build
-
-import sbt._
+import blockadeio.JsonAsString
+import depgraph.{ModuleGraph, SbtUpdateReport}
 import sbt.Keys._
+import sbt._
 import scala.concurrent.duration._
-import depgraph._
+import scala.util.Try
 
 object BlockadePlugin extends AutoPlugin { self =>
 
@@ -29,6 +29,7 @@ object BlockadePlugin extends AutoPlugin { self =>
     val blockadeEnforcementInterval = settingKey[Duration]("blockade-enforcement-interval")
     val blockadeCacheFile = settingKey[File]("blockade-cache-file")
     val blockadeUris = settingKey[Seq[URI]]("blockade-uris")
+    val blockadeUriResolver = taskKey[URI => Try[JsonAsString]]("blockade-uri-resolver")
     val blockade = taskKey[Unit]("blockade")
     val blockadeDependencyGraphCrossProjectId = settingKey[ModuleID]("blockade-dependency-graph-cross-project-id")
     val blockadeFailTransitive = settingKey[Boolean]("blockade-fail-transitive")
@@ -45,11 +46,10 @@ object BlockadePlugin extends AutoPlugin { self =>
   )
 
   /** actual plugin content **/
-  import scala.Console.{CYAN, RED, YELLOW, GREEN, RESET}
-  import scala.util.{Try, Failure, Success}
-
-  import scala.io.Source
   import BlockadeOps._
+  import scala.Console.{GREEN, RESET, YELLOW}
+  import scala.io.Source
+  import scala.util.{Failure, Success, Try}
 
   private def dependenciesOK(name: String, transitive: Boolean = false): String =
     GREEN + s"[$name] All ${if (transitive) "transitive" else "direct"} dependencies are within current restrictions." + RESET
@@ -73,28 +73,36 @@ object BlockadePlugin extends AutoPlugin { self =>
     else Failure[Seq[T]](fs(0).exception) // Only keep the first failure
   }
 
-  val moduleGraphSbtTask =
-    (sbt.Keys.update, blockadeDependencyGraphCrossProjectId, sbt.Keys.configuration in Compile) map { (update, root, config) ⇒
-      SbtUpdateReport.fromConfigurationReport(update.configuration(config.name).get, root)
+  val moduleGraphSbtTask = Def.taskDyn {
+    val update = sbt.Keys.update.value
+    val root = blockadeDependencyGraphCrossProjectId.value
+    val config = (sbt.Keys.configuration in Compile).value
+    Def.task {
+      SbtUpdateReport.fromConfigurationReport(update.configuration(config).get, root)
     }
+  }
 
   def settings: Seq[Def.Setting[_]] = Seq(
-    blockadeDependencyGraphCrossProjectId <<= (Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.projectID) ((sV, sBV, id) ⇒ CrossVersion(sV, sBV)(id)),
+    blockadeDependencyGraphCrossProjectId := {
+      CrossVersion(Keys.scalaVersion.value, Keys.scalaBinaryVersion.value)(Keys.projectID.value)
+    },
     blockadeCacheFile := target.value / "blockaded",
     blockadeEnforcementInterval := 30.minutes,
     blockadeUris := Seq.empty,
+    blockadeUriResolver := blockadeio.loadFromURI,
     skip in blockade := {
       val f = blockadeCacheFile.value
       if (f.exists) readCheckFile(f) else false
     },
     blockade := {
       val log = streams.value.log
+      val moduleGraph = moduleGraphSbtTask.value
 
       // If the project has not been blockaded recently, we attempt to blockade and display results.
       if (!(skip in blockade).value) {
-        val parsedBlockadeItems: Try[Seq[Blockade]] = flattenTrys(blockadeUris.value.map(url => blockadeio.loadFromURI(url).flatMap(BlockadeOps.parseBlockade)))
+        val parsedBlockadeItems: Try[Seq[Blockade]] = flattenTrys(blockadeUris.value.map(url => blockadeUriResolver.value(url).flatMap(BlockadeOps.parseBlockade)))
         val deps: Seq[ModuleID] = (libraryDependencies in Compile).value
-        val graph: ModuleGraph = GraphOps.pruneEvicted(moduleGraphSbtTask.value)
+        val graph: ModuleGraph = GraphOps.pruneEvicted(moduleGraph)
         parsedBlockadeItems.map((blockades: Seq[Blockade]) => BlockadeOps.analyseDeps(deps, blockades, graph)) match {
           case Failure(_: java.net.UnknownHostException) => ()
 
