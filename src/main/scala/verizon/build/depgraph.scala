@@ -1,18 +1,11 @@
-//: ----------------------------------------------------------------------------
-//: Copyright 2015 Johannes Rudolph
-//:
-//: Distributed under the Apache 2.0 License, please see the NOTICE
-//: file in the root of the project for further details.
-//: ----------------------------------------------------------------------------
 package verizon.build
 
 object depgraph {
 
-  import sbt._
-  import scala.language.reflectiveCalls
   import java.io.File
-  import scala.collection.mutable.{MultiMap, HashMap, Set}
-  import sbinary.{Format, DefaultProtocol}
+  import sbt._
+  import scala.collection.mutable.{HashMap, MultiMap, Set}
+  import scala.language.reflectiveCalls
 
   object SbtUpdateReport {
 
