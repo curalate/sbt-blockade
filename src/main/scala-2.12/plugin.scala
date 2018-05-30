@@ -14,10 +14,12 @@
 //:   limitations under the License.
 //:
 //: ----------------------------------------------------------------------------
-import blockadeio.JsonAsString
-import depgraph.{ModuleGraph, SbtUpdateReport}
+
+import verizon.build.depgraph.{ModuleGraph, SbtUpdateReport}
 import sbt.Keys._
 import sbt._
+import verizon.build.blockadeio
+import verizon.build.blockadeio._
 import scala.concurrent.duration._
 import scala.util.Try
 

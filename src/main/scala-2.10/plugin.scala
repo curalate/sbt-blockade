@@ -16,10 +16,15 @@
 //: ----------------------------------------------------------------------------
 package verizon.build
 
-import sbt._
+import BlockadeOps.TransitiveViolation
 import sbt.Keys._
+import sbt._
+import verizon.build.blockadeio
+import verizon.build.blockadeio._
+import verizon.build.depgraph._
 import scala.concurrent.duration._
 import depgraph._
+import scala.util.Try
 
 object BlockadePlugin extends AutoPlugin { self =>
 
@@ -45,11 +50,9 @@ object BlockadePlugin extends AutoPlugin { self =>
   )
 
   /** actual plugin content **/
-  import scala.Console.{CYAN, RED, YELLOW, GREEN, RESET}
-  import scala.util.{Try, Failure, Success}
-
+  import scala.Console.{GREEN, RESET, YELLOW}
   import scala.io.Source
-  import BlockadeOps._
+  import scala.util.{Failure, Success, Try}
 
   private def dependenciesOK(name: String, transitive: Boolean = false): String =
     GREEN + s"[$name] All ${if (transitive) "transitive" else "direct"} dependencies are within current restrictions." + RESET

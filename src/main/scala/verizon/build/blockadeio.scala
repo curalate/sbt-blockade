@@ -14,6 +14,8 @@
 //:   limitations under the License.
 //:
 //: ----------------------------------------------------------------------------
+package verizon.build
+
 import java.net.URI
 import scala.io.Source
 import scala.util.Try

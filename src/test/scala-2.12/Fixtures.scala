@@ -1,5 +1,5 @@
 import BlockadeOps._
-import depgraph._
+import verizon.build.depgraph._
 import java.net.URL
 import sbt.librarymanagement.DependencyBuilders
 

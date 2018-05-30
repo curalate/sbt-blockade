@@ -14,7 +14,7 @@
 //:   limitations under the License.
 //:
 //: ----------------------------------------------------------------------------
-import depgraph.{Edge, ModuleGraph, ModuleId}
+import verizon.build.depgraph.{Edge, ModuleGraph, ModuleId}
 import java.text.SimpleDateFormat
 import java.util.Date
 import net.liftweb.json._
